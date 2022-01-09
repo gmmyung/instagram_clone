@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -27,59 +28,70 @@ morePost() async {
 }
 
 class Home extends StatefulWidget {
-  const Home({Key? key, this.posts, this.refreshHandler, this.addHandler})
+  const Home(
+      {Key? key,
+      this.posts,
+      this.refreshHandler,
+      this.addHandler,
+      this.refreshcontroller})
       : super(key: key);
   final posts;
   final refreshHandler;
   final addHandler;
+  final refreshcontroller;
   @override
   _HomeState createState() => _HomeState();
 }
 
 class _HomeState extends State<Home> {
   var scrollController = ScrollController();
-  var scrollHigh = false;
-  var scrollLow = false;
-
-  @override
-  void initState() {
-    super.initState();
-    scrollController.addListener(() {
-      if (scrollController.position.pixels > -150 && scrollHigh) {
-        print('high');
-        widget.refreshHandler();
-      }
-      if (scrollController.position.pixels <
-              (scrollController.position.maxScrollExtent + 150) &&
-          scrollLow) {
-        print('low');
-        widget.addHandler();
-      }
-
-      setState(() {
-        scrollHigh = (scrollController.position.pixels <= -150);
-        scrollLow = (scrollController.position.pixels >=
-            (scrollController.position.maxScrollExtent + 150));
-      });
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     if (widget.posts.isNotEmpty) {
-      return ListView.builder(
-          controller: scrollController,
-          itemCount: widget.posts.length,
-          itemBuilder: (context, i) {
-            return PostWidget(
-                image: Image.network(widget.posts[i]['image']),
-                author: widget.posts[i]['user'],
-                likes: widget.posts[i]['likes'],
-                content: widget.posts[i]['content']);
-          });
+      return SmartRefresher(
+        header: const ClassicHeader(
+          completeDuration: Duration(milliseconds: 100),
+          releaseText: '',
+          refreshingText: '',
+          completeText: '',
+          idleText: '',
+        ),
+        footer: const ClassicFooter(
+          idleText: '',
+          failedText: '',
+          loadingText: '',
+          canLoadingText: '',
+        ),
+        enablePullDown: true,
+        enablePullUp: true,
+        controller: widget.refreshcontroller,
+        onRefresh: widget.refreshHandler,
+        onLoading: widget.addHandler,
+        child: ListView.builder(
+            controller: scrollController,
+            itemCount: widget.posts.length,
+            itemBuilder: (context, i) {
+              return PostWidget(
+                  image: imageLoader(widget.posts[i]),
+                  author: widget.posts[i]['user'],
+                  likes: widget.posts[i]['likes'],
+                  content: widget.posts[i]['content']);
+            }),
+      );
     } else {
-      return Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator());
     }
+  }
+}
+
+imageLoader(post) {
+  print(post['local']);
+  if (post['local'] == true) {
+    print(post['image']);
+    return Image.file(post['image']);
+  } else {
+    return Image.network(post['image']);
   }
 }
 

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/rendering.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import 'materialTheme.dart' as my_theme;
 import 'post.dart';
 import 'upload.dart';
@@ -23,25 +26,45 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   var tabState = 0; // 0 -> home, 1 -> shop
   var posts = [];
+  var refreshController = RefreshController(initialRefresh: false);
+  File? userImage;
 
   getpost() async {
     var result = await getPost();
+    await Future.delayed(Duration(milliseconds: 200));
     setState(() {
       posts = [];
       posts = result;
     });
+
+    print('refreshpost');
+    refreshController.refreshCompleted();
+    refreshController.loadComplete();
   }
 
   morepost() async {
     var result = await morePost();
-
+    await Future.delayed(Duration(milliseconds: 200));
     setState(() {
       if (result != null) posts.add(result);
+    });
+    print('morepost');
+    if (result == null) {
+      refreshController.loadNoData();
+    } else {
+      refreshController.loadComplete();
+    }
+  }
+
+  addpost(post) async {
+    setState(() {
+      posts.add(post);
     });
   }
 
   @override
   void initState() {
+    refreshController = RefreshController(initialRefresh: false);
     super.initState();
     getpost();
   }
@@ -59,18 +82,38 @@ class _MyAppState extends State<MyApp> {
                 padding: const EdgeInsets.symmetric(horizontal: 12.0),
                 child: IconButton(
                     icon: const Icon(Icons.add),
-                    onPressed: () {
+                    onPressed: () async {
+                      var picker = ImagePicker();
+                      var image =
+                          await picker.pickImage(source: ImageSource.gallery);
+                      print(image);
+                      setState(() {
+                        if (image != null) {
+                          print(image.path);
+                          userImage = File(image.path);
+                        } else {
+                          userImage = null;
+                        }
+                      });
+                      if (userImage == null) {
+                        return;
+                      }
                       Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (c) => const Upload(),
+                            builder: (c) =>
+                                Upload(image: userImage, uploadMethod: addpost),
                           ));
                     }))
           ],
         ),
         body: [
-          Home(posts: posts, refreshHandler: getpost, addHandler: morepost),
-          Text('shop')
+          Home(
+              posts: posts,
+              refreshHandler: getpost,
+              addHandler: morepost,
+              refreshcontroller: refreshController),
+          const Text('shop')
         ][tabState],
         bottomNavigationBar: Container(
           decoration: BoxDecoration(

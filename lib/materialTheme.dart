@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 const lightModeBorderColor = Color(0xffdbdbdb);
 const darkModeBorderColor = Color(0xff222222);
 
+var lightModeShadowColor = Color(0xffcccccc).withOpacity(0.5);
+var darkModeShadowColor = Color(0xff222222).withOpacity(0.2);
+
 ThemeData? materialAppLightTheme() {
   return ThemeData(
       textTheme: const TextTheme(
@@ -12,6 +15,7 @@ ThemeData? materialAppLightTheme() {
               fontWeight: FontWeight.w400, color: Colors.black, fontSize: 14)),
       splashFactory: NoSplash.splashFactory,
       dividerColor: lightModeBorderColor,
+      shadowColor: lightModeShadowColor,
       iconTheme: const IconThemeData(color: Colors.black),
       scaffoldBackgroundColor: Colors.white,
       appBarTheme: const AppBarTheme(
@@ -43,6 +47,7 @@ ThemeData? materialAppDarkTheme() {
               fontWeight: FontWeight.w400, color: Colors.white, fontSize: 14)),
       splashFactory: NoSplash.splashFactory,
       dividerColor: darkModeBorderColor,
+      shadowColor: lightModeShadowColor,
       iconTheme: const IconThemeData(color: Colors.white),
       scaffoldBackgroundColor: Colors.black,
       appBarTheme: const AppBarTheme(
