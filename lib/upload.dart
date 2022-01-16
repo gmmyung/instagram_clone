@@ -1,3 +1,5 @@
+import 'dart:io' as io;
+
 import 'package:flutter/material.dart';
 
 class Upload extends StatefulWidget {
@@ -9,8 +11,8 @@ class Upload extends StatefulWidget {
 }
 
 class _UploadState extends State<Upload> {
-  String? userName = null;
-  String? content = null;
+  String? userName;
+  String? content;
 
   @override
   Widget build(BuildContext context) {
@@ -42,13 +44,13 @@ class _UploadState extends State<Upload> {
                         blurRadius: 5,
                         offset: Offset(0, 3))
                   ]),
-                  child: Image.file(widget.image)),
+                  child: Image.file(io.File(widget.image))),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
               child: Column(
                 children: [
-                  TextFieldPadding,
+                  textFieldPadding,
                   TextField(
                       onChanged: (input) {
                         setState(() {
@@ -58,14 +60,14 @@ class _UploadState extends State<Upload> {
                       cursorColor: Theme.of(context).iconTheme.color,
                       style: Theme.of(context).textTheme.bodyText2,
                       decoration: InputDecoration(
-                          focusedBorder: TextFieldBorder(
+                          focusedBorder: textFieldBorder(
                               Theme.of(context).iconTheme.color),
                           labelText: 'User',
                           labelStyle: Theme.of(context).textTheme.bodyText2,
-                          enabledBorder: TextFieldBorder(
+                          enabledBorder: textFieldBorder(
                               Theme.of(context).iconTheme.color),
                           floatingLabelBehavior: FloatingLabelBehavior.always)),
-                  TextFieldPadding,
+                  textFieldPadding,
                   TextField(
                       onChanged: (input) {
                         setState(() {
@@ -77,14 +79,14 @@ class _UploadState extends State<Upload> {
                       cursorColor: Theme.of(context).iconTheme.color,
                       style: Theme.of(context).textTheme.bodyText2,
                       decoration: InputDecoration(
-                          focusedBorder: TextFieldBorder(
+                          focusedBorder: textFieldBorder(
                               Theme.of(context).iconTheme.color),
                           labelText: 'Content',
                           labelStyle: Theme.of(context).textTheme.bodyText2,
-                          enabledBorder: TextFieldBorder(
+                          enabledBorder: textFieldBorder(
                               Theme.of(context).iconTheme.color),
                           floatingLabelBehavior: FloatingLabelBehavior.always)),
-                  TextFieldPadding,
+                  textFieldPadding,
                   TextButton(
                       onPressed: () {
                         widget.uploadMethod({
@@ -98,7 +100,7 @@ class _UploadState extends State<Upload> {
                         });
                         Navigator.pop(context);
                       },
-                      child: SizedBox(
+                      child: const SizedBox(
                         child: Text('Upload'),
                       ))
                 ],
@@ -109,10 +111,10 @@ class _UploadState extends State<Upload> {
   }
 }
 
-var TextFieldPadding = SizedBox(height: 30);
+var textFieldPadding = SizedBox(height: 30);
 
-TextFieldBorder(color) {
+OutlineInputBorder textFieldBorder(color) {
   return OutlineInputBorder(
       borderSide: BorderSide(width: 1, color: color),
-      borderRadius: BorderRadius.all(Radius.circular(20)));
+      borderRadius: const BorderRadius.all(Radius.circular(20)));
 }

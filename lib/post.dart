@@ -3,24 +3,34 @@ import 'package:http/http.dart' as http;
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'profile.dart';
+import 'store.dart';
 
-var _refreshNum = 1;
+int? _refreshNum;
 
-getPost() async {
+getPost({initialize = false}) async {
+  var storage = await SharedPreferences.getInstance();
   var result =
       await http.get(Uri.parse('https://codingapple1.github.io/app/data.json'));
   if (result.statusCode == 200) {
-    _refreshNum = 1;
+    if (initialize == false) {
+      _refreshNum = 1;
+    }
+    await storage.setInt('refreshnum', _refreshNum ?? 1);
     return jsonDecode(result.body);
   }
 }
 
 morePost() async {
+  var storage = await SharedPreferences.getInstance();
   var result = await http.get(
       Uri.parse('https://codingapple1.github.io/app/more${_refreshNum}.json'));
   if (result.statusCode == 200) {
-    print(result.body);
-    _refreshNum++;
+    if (_refreshNum != null) {
+      _refreshNum = _refreshNum! + 1;
+    }
+    await storage.setInt('refreshnum', _refreshNum ?? 1);
     return jsonDecode(result.body);
   } else {
     return null;
@@ -45,6 +55,17 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   var scrollController = ScrollController();
+
+  initialize() async {
+    var storage = await SharedPreferences.getInstance();
+    _refreshNum = storage.getInt('refreshnum') ?? 1;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    initialize();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,6 +94,7 @@ class _HomeState extends State<Home> {
             itemCount: widget.posts.length,
             itemBuilder: (context, i) {
               return PostWidget(
+                  i: i,
                   image: imageLoader(widget.posts[i]),
                   author: widget.posts[i]['user'],
                   likes: widget.posts[i]['likes'],
@@ -86,19 +108,47 @@ class _HomeState extends State<Home> {
 }
 
 imageLoader(post) {
-  print(post['local']);
   if (post['local'] == true) {
-    print(post['image']);
-    return Image.file(post['image']);
+    if (File(post['image']).existsSync()) {
+      return Image.file(File(post['image']));
+    } else {
+      return Text('Noimage');
+    }
   } else {
     return Image.network(post['image']);
   }
 }
 
+/*
+imageLoaderWrap(contenxt, post) {
+  return FutureBuilder(
+      future: imageLoader(post),
+      builder: (BuildContext context, AsyncSnapshot snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          if (snapshot.hasError) {
+            return Text('haserror');
+
+            ///return Image.asset('assets/images/no_image.jpg');
+          }
+          return snapshot.data;
+        } else {
+          return const SizedBox(
+              height: 300, child: CircularProgressIndicator());
+        }
+      });
+}
+*/
 class PostWidget extends StatefulWidget {
-  PostWidget({Key? key, this.image, this.likes, this.author, this.content})
+  PostWidget(
+      {Key? key,
+      required this.i,
+      this.image,
+      this.likes,
+      this.author,
+      this.content})
       : super(key: key);
-  Image? image;
+  int i;
+  Widget? image;
   String? author;
   String? content;
   int? likes;
@@ -114,12 +164,18 @@ class _PostWidgetState extends State<PostWidget> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 0, 12),
-          child: SizedBox(
-              width: 150,
-              child: Text(
-                widget.author ?? '',
-                style: Theme.of(context).textTheme.bodyText1,
-              )),
+          child: GestureDetector(
+            onTap: () {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (c) => Profile(i: widget.i)));
+            },
+            child: SizedBox(
+                width: 150,
+                child: Text(
+                  widget.author ?? '',
+                  style: Theme.of(context).textTheme.bodyText1,
+                )),
+          ),
         ),
         widget.image ?? Image.asset('assets/images/no_image.jpg'),
         Padding(

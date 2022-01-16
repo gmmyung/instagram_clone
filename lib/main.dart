@@ -1,18 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/rendering.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'materialTheme.dart' as my_theme;
 import 'post.dart';
 import 'upload.dart';
+import 'store.dart';
+import 'package:provider/provider.dart';
+import 'notification.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
-void main() {
-  runApp(MaterialApp(
-    home: const MyApp(),
-    theme: my_theme.materialAppLightTheme(),
-    darkTheme: my_theme.materialAppDarkTheme(),
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  runApp(ChangeNotifierProvider(
+    create: (c) => Store(),
+    child: MaterialApp(
+      home: MyApp(),
+      theme: my_theme.materialAppLightTheme(),
+      darkTheme: my_theme.materialAppDarkTheme(),
+    ),
   ));
 }
 
@@ -26,52 +41,112 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   var tabState = 0; // 0 -> home, 1 -> shop
   var posts = [];
+  var debugposts = [];
   var refreshController = RefreshController(initialRefresh: false);
-  File? userImage;
+  String? userImage;
 
-  getpost() async {
-    var result = await getPost();
-    await Future.delayed(Duration(milliseconds: 200));
+  saveData(post) async {
+    var storage = await SharedPreferences.getInstance();
+    List<String> postlist = [];
+    for (int i = 0; i < posts.length; i++) {
+      postlist.add(jsonEncode(posts[i]));
+    }
+    await storage.setStringList('posts', postlist);
     setState(() {
-      posts = [];
-      posts = result;
+      debugposts = postlist;
+    });
+  }
+
+  getData() async {
+    var storage = await SharedPreferences.getInstance();
+    List<String> postfile = storage.getStringList('posts') ?? [];
+    var postlist = [];
+    for (var p in postfile) {
+      postlist.add(jsonDecode(p));
+    }
+    return postlist;
+  }
+
+  getpost({initialize: false}) async {
+    var result = await getPost(initialize: initialize);
+    await Future.delayed(const Duration(milliseconds: 200));
+    setState(() {
+      if (initialize == false) {
+        posts = result;
+      }
+      if (posts.isEmpty) {
+        posts = result;
+      }
     });
 
-    print('refreshpost');
+    //print('refreshpost');
     refreshController.refreshCompleted();
     refreshController.loadComplete();
+    saveData(posts);
+    context.read<Store>().initializeuser(posts.length);
   }
 
   morepost() async {
     var result = await morePost();
-    await Future.delayed(Duration(milliseconds: 200));
+    await Future.delayed(const Duration(milliseconds: 200));
     setState(() {
-      if (result != null) posts.add(result);
+      if (result != null) {
+        posts.add(result);
+        context.read<Store>().adduser();
+      }
     });
-    print('morepost');
     if (result == null) {
       refreshController.loadNoData();
     } else {
       refreshController.loadComplete();
     }
+    saveData(posts);
   }
 
   addpost(post) async {
     setState(() {
+      post['id'] = posts.length;
       posts.add(post);
+      context.read<Store>().adduser();
     });
+
+    print(post);
+    saveData(posts);
+  }
+
+  initialData() async {
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    await preferences.clear();
+
+    var postlist = await getData() ?? [];
+    setState(() {
+      posts = postlist;
+    });
+    setState(() {
+      debugposts = posts;
+    });
+    await getpost(initialize: true);
+    context.read<Store>().initializeuser(posts.length);
+    print(context.read<Store>().followers);
   }
 
   @override
   void initState() {
     refreshController = RefreshController(initialRefresh: false);
     super.initState();
-    getpost();
+    initialData();
+    initNotification(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+        floatingActionButton: FloatingActionButton(
+          child: Text('+'),
+          onPressed: () {
+            showNotification2();
+          },
+        ),
         appBar: AppBar(
           centerTitle: false,
           title: SvgPicture.asset('assets/images/instagram.svg',
@@ -86,11 +161,9 @@ class _MyAppState extends State<MyApp> {
                       var picker = ImagePicker();
                       var image =
                           await picker.pickImage(source: ImageSource.gallery);
-                      print(image);
                       setState(() {
                         if (image != null) {
-                          print(image.path);
-                          userImage = File(image.path);
+                          userImage = image.path;
                         } else {
                           userImage = null;
                         }
@@ -113,7 +186,7 @@ class _MyAppState extends State<MyApp> {
               refreshHandler: getpost,
               addHandler: morepost,
               refreshcontroller: refreshController),
-          const Text('shop')
+          Text(debugposts.toString())
         ][tabState],
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
