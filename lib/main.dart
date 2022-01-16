@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import 'notification.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'shop.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -140,6 +141,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    print(MediaQuery.of(context).devicePixelRatio);
     return Scaffold(
         floatingActionButton: FloatingActionButton(
           child: Text('+'),
@@ -186,7 +188,8 @@ class _MyAppState extends State<MyApp> {
               refreshHandler: getpost,
               addHandler: morepost,
               refreshcontroller: refreshController),
-          Text(debugposts.toString())
+          //Text(debugposts.toString())
+          Shop()
         ][tabState],
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
